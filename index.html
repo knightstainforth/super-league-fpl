@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Knights Table Super League — Standings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --fpl-purple: #37003c;
+    --fpl-purple-light: #5c1465;
+    --fpl-green: #00ff87;
+    --fpl-cyan: #04f5ff;
+    --surface: #f4f1f5;
+    --card: #ffffff;
+    --text-primary: #16001a;
+    --text-secondary: #5c4a60;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px 12px 40px; background: var(--surface); font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .fplst-root { max-width: 680px; margin: 0 auto; color: var(--text-primary); }
+  .fplst-header {
+    background: linear-gradient(135deg, var(--fpl-purple) 0%, var(--fpl-purple-light) 100%);
+    border-radius: 16px 16px 0 0;
+    padding: 22px 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    position: relative; overflow: hidden;
+  }
+  .fplst-header::after {
+    content: ""; position: absolute; right: -40px; top: -40px; width: 160px; height: 160px;
+    background: var(--fpl-cyan); opacity: 0.15; border-radius: 50%;
+  }
+  .fplst-title { font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 21px; color: #fff; line-height: 1.2; letter-spacing: -0.01em; }
+  .fplst-sub { font-size: 13px; color: var(--fpl-green); font-weight: 600; margin-top: 3px; }
+  .fplst-badge {
+    background: var(--fpl-green); color: var(--fpl-purple); font-family: 'Montserrat', sans-serif;
+    font-weight: 800; font-size: 13px; padding: 7px 14px; border-radius: 999px; white-space: nowrap; z-index: 1;
+  }
+  .fplst-tabs { display: flex; background: var(--fpl-purple); padding: 0 12px; gap: 4px; }
+  .fplst-tab {
+    flex: 1; text-align: center; padding: 12px 6px; font-family: 'Montserrat', sans-serif; font-weight: 700;
+    font-size: 13px; color: #cbb0d1; cursor: pointer; border-radius: 8px 8px 0 0; border: none; background: transparent;
+    transition: background 0.15s, color 0.15s;
+  }
+  .fplst-tab.fplst-tabactive { background: var(--card); color: var(--fpl-purple); }
+  .fplst-body { background: var(--card); border-radius: 0 0 16px 16px; padding: 20px; box-shadow: 0 2px 10px rgba(55,0,60,0.12); }
+  .fplst-tabpanel { display: none; }
+  .fplst-tabpanel.fplst-active { display: block; }
+  .fplst-panelhead { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12px; }
+  .fplst-panellabel { font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 16px; color: var(--fpl-purple); }
+  .fplst-panelrange { font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+  .fplst-callouts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .fplst-callout { background: #f4edf6; border: 1px solid #e3d3e8; border-radius: 10px; padding: 10px 12px; font-size: 13.5px; line-height: 1.45; color: var(--text-primary); }
+  .fplst-callout b { color: var(--fpl-purple); }
+  .fplst-tablewrap { overflow-x: auto; }
+  .fplst-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .fplst-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); padding: 8px 6px; border-bottom: 2px solid #e5dee7; font-weight: 700; }
+  .fplst-table td { padding: 9px 6px; border-bottom: 1px solid #f0ebf1; }
+  .fplst-team { color: var(--text-secondary); }
+  .fplst-th-rank, .fplst-th-num { text-align: center !important; }
+  .fplst-table td:first-child, .fplst-table td:nth-child(4), .fplst-table td:nth-child(5) { text-align: center; }
+  .fplst-table td:last-child { font-weight: 800; color: var(--fpl-purple); }
+  .fplst-rankbadge { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; font-weight: 800; font-size: 12px; background: #ece4ee; color: var(--text-secondary); }
+  .fplst-rank-1 { background: var(--fpl-green); color: var(--fpl-purple); }
+  .fplst-rank-2 { background: #d9d9d9; color: #3a3a3a; }
+  .fplst-rank-3 { background: #e8b98a; color: #5a3300; }
+  .fplst-footer { margin-top: 14px; font-size: 12px; color: var(--text-secondary); text-align: right; }
+
+  .fplst-prizepot { margin-top: 20px; background: var(--card); border-radius: 16px; padding: 20px; box-shadow: 0 2px 10px rgba(55,0,60,0.12); }
+  .fplst-prizepot-title { font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 17px; color: var(--fpl-purple); }
+  .fplst-prizepot-sub { font-size: 12.5px; color: var(--text-secondary); margin-top: 3px; margin-bottom: 16px; }
+  .fplst-prizegroup { margin-bottom: 16px; }
+  .fplst-prizegroup:last-of-type { margin-bottom: 0; }
+  .fplst-prizegroup-head {
+    font-family: 'Montserrat', sans-serif; font-weight: 800; font-size: 13.5px; color: #fff; background: var(--fpl-purple);
+    padding: 8px 12px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px;
+  }
+  .fplst-fundchip { background: var(--fpl-green); color: var(--fpl-purple); font-size: 11px; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .fplst-prizerow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 4px; border-bottom: 1px solid #f0ebf1; font-size: 13.5px; }
+  .fplst-prizerow:last-child { border-bottom: none; }
+  .fplst-prizewhat { color: var(--text-primary); }
+  .fplst-prizeamt { font-weight: 800; color: var(--fpl-purple); white-space: nowrap; }
+  .fplst-prizeamt small { font-weight: 500; color: var(--text-secondary); }
+  .fplst-prizenote { margin-top: 12px; font-size: 11.5px; color: var(--text-secondary); line-height: 1.5; }
+
+  @media (prefers-color-scheme: dark) {
+    :root { --surface: #120014; --card: #1f0224; --text-primary: #ffffff; --text-secondary: #c9b7cc; }
+    .fplst-table th { border-bottom-color: #3a1f3e; }
+    .fplst-table td { border-bottom-color: #2c1530; }
+    .fplst-callout { background: #2a0e30; border-color: #4a2350; }
+    .fplst-prizerow { border-bottom-color: #2c1530; }
+    .fplst-rankbadge { background: #3a1f3e; color: #c9b7cc; }
+    body { background: var(--surface); }
+  }
+</style>
+</head>
+<body>
+<div class="fplst-root">
+  <div class="fplst-header">
+    <div>
+      <div class="fplst-title">🏆 Knights Table Super League</div>
+      <div class="fplst-sub">2026/27 Season</div>
+    </div>
+    <div class="fplst-badge">Pre-season</div>
+  </div>
+  <div class="fplst-tabs" role="tablist">
+    <button class="fplst-tab fplst-tabactive" data-tab="overall" role="tab">Overall</button>
+    <button class="fplst-tab" data-tab="half1" role="tab">1st Half</button>
+    <button class="fplst-tab" data-tab="half2" role="tab">2nd Half</button>
+  </div>
+  <div class="fplst-body">
+    
+  <div class="fplst-tabpanel fplst-active" id="fplst-panel-overall" role="tabpanel">
+    <div class="fplst-panelhead">
+      <div class="fplst-panellabel">Overall Season</div>
+      <div class="fplst-panelrange">GW1 – GW38 (no reset)</div>
+    </div>
+    <div class="fplst-callouts"><div class="fplst-callout">⚽ Season hasn't kicked off yet — check back after Gameweek 1!</div></div>
+    <div class="fplst-tablewrap">
+      <table class="fplst-table">
+        <thead><tr><th class="fplst-th-rank">#</th><th>Manager</th><th>Team</th><th class="fplst-th-num">GW</th><th class="fplst-th-num">Total</th></tr></thead>
+        <tbody><tr><td><span class="fplst-rankbadge fplst-rank-1">1</span></td><td>Paul kilner</td><td class="fplst-team">Livin' Saliba Loca</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge fplst-rank-2">2</span></td><td>Ben Wallbank</td><td class="fplst-team">Sweet Child O'Nien</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge fplst-rank-3">3</span></td><td>Trevor Jones</td><td class="fplst-team">kroos control</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">4</span></td><td>James Eather</td><td class="fplst-team">Pending Moderation</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">5</span></td><td>Alison Fry</td><td class="fplst-team">Neville Wears Prada</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">6</span></td><td>Richard Wallbank</td><td class="fplst-team">Pending Moderation</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">7</span></td><td>Charlie Wallbank</td><td class="fplst-team">Expected Toulouse</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">8</span></td><td>Jonny Bryson</td><td class="fplst-team">Marney and Mee</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">9</span></td><td>Will Maudsley</td><td class="fplst-team">Return of the Djedi</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">10</span></td><td>Izzy Walker</td><td class="fplst-team">Palmer Violets</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">11</span></td><td>Robert Wills</td><td class="fplst-team">Bench Warmers</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">12</span></td><td>James Bradley</td><td class="fplst-team">Real Madri</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">13</span></td><td>Gerard Williams</td><td class="fplst-team">Blues Bros</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">14</span></td><td>Elizabeth Wallbank</td><td class="fplst-team">The Schade they fall</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">15</span></td><td>Steven Smith</td><td class="fplst-team">Chiesa Later</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">16</span></td><td>Matty Kilner</td><td class="fplst-team">The M&Ms</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">17</span></td><td>Nathan Shannon</td><td class="fplst-team">No Likey No Lightey</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">18</span></td><td>Ryan Maudsley</td><td class="fplst-team">Awob Abob Bobb</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">19</span></td><td>Paul Maudsley</td><td class="fplst-team">Stach my Klich up</td><td>—</td><td>0</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+    
+  <div class="fplst-tabpanel" id="fplst-panel-half1" role="tabpanel">
+    <div class="fplst-panelhead">
+      <div class="fplst-panellabel">First Half</div>
+      <div class="fplst-panelrange">GW1 – GW19</div>
+    </div>
+    <div class="fplst-callouts"><div class="fplst-callout">⚽ First Half hasn't started yet.</div></div>
+    <div class="fplst-tablewrap">
+      <table class="fplst-table">
+        <thead><tr><th class="fplst-th-rank">#</th><th>Manager</th><th>Team</th><th class="fplst-th-num">GW</th><th class="fplst-th-num">Half Total</th></tr></thead>
+        <tbody><tr><td><span class="fplst-rankbadge fplst-rank-1">1</span></td><td>Paul kilner</td><td class="fplst-team">Livin' Saliba Loca</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge fplst-rank-2">2</span></td><td>Ben Wallbank</td><td class="fplst-team">Sweet Child O'Nien</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge fplst-rank-3">3</span></td><td>Trevor Jones</td><td class="fplst-team">kroos control</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">4</span></td><td>James Eather</td><td class="fplst-team">Pending Moderation</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">5</span></td><td>Alison Fry</td><td class="fplst-team">Neville Wears Prada</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">6</span></td><td>Richard Wallbank</td><td class="fplst-team">Pending Moderation</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">7</span></td><td>Charlie Wallbank</td><td class="fplst-team">Expected Toulouse</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">8</span></td><td>Jonny Bryson</td><td class="fplst-team">Marney and Mee</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">9</span></td><td>Will Maudsley</td><td class="fplst-team">Return of the Djedi</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">10</span></td><td>Izzy Walker</td><td class="fplst-team">Palmer Violets</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">11</span></td><td>Robert Wills</td><td class="fplst-team">Bench Warmers</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">12</span></td><td>James Bradley</td><td class="fplst-team">Real Madri</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">13</span></td><td>Gerard Williams</td><td class="fplst-team">Blues Bros</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">14</span></td><td>Elizabeth Wallbank</td><td class="fplst-team">The Schade they fall</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">15</span></td><td>Steven Smith</td><td class="fplst-team">Chiesa Later</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">16</span></td><td>Matty Kilner</td><td class="fplst-team">The M&Ms</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">17</span></td><td>Nathan Shannon</td><td class="fplst-team">No Likey No Lightey</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">18</span></td><td>Ryan Maudsley</td><td class="fplst-team">Awob Abob Bobb</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">19</span></td><td>Paul Maudsley</td><td class="fplst-team">Stach my Klich up</td><td>—</td><td>0</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+    
+  <div class="fplst-tabpanel" id="fplst-panel-half2" role="tabpanel">
+    <div class="fplst-panelhead">
+      <div class="fplst-panellabel">Second Half</div>
+      <div class="fplst-panelrange">GW20 – GW38</div>
+    </div>
+    <div class="fplst-callouts"><div class="fplst-callout">⚽ Second Half hasn't started yet.</div></div>
+    <div class="fplst-tablewrap">
+      <table class="fplst-table">
+        <thead><tr><th class="fplst-th-rank">#</th><th>Manager</th><th>Team</th><th class="fplst-th-num">GW</th><th class="fplst-th-num">Half Total</th></tr></thead>
+        <tbody><tr><td><span class="fplst-rankbadge fplst-rank-1">1</span></td><td>Paul kilner</td><td class="fplst-team">Livin' Saliba Loca</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge fplst-rank-2">2</span></td><td>Ben Wallbank</td><td class="fplst-team">Sweet Child O'Nien</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge fplst-rank-3">3</span></td><td>Trevor Jones</td><td class="fplst-team">kroos control</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">4</span></td><td>James Eather</td><td class="fplst-team">Pending Moderation</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">5</span></td><td>Alison Fry</td><td class="fplst-team">Neville Wears Prada</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">6</span></td><td>Richard Wallbank</td><td class="fplst-team">Pending Moderation</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">7</span></td><td>Charlie Wallbank</td><td class="fplst-team">Expected Toulouse</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">8</span></td><td>Jonny Bryson</td><td class="fplst-team">Marney and Mee</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">9</span></td><td>Will Maudsley</td><td class="fplst-team">Return of the Djedi</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">10</span></td><td>Izzy Walker</td><td class="fplst-team">Palmer Violets</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">11</span></td><td>Robert Wills</td><td class="fplst-team">Bench Warmers</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">12</span></td><td>James Bradley</td><td class="fplst-team">Real Madri</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">13</span></td><td>Gerard Williams</td><td class="fplst-team">Blues Bros</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">14</span></td><td>Elizabeth Wallbank</td><td class="fplst-team">The Schade they fall</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">15</span></td><td>Steven Smith</td><td class="fplst-team">Chiesa Later</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">16</span></td><td>Matty Kilner</td><td class="fplst-team">The M&Ms</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">17</span></td><td>Nathan Shannon</td><td class="fplst-team">No Likey No Lightey</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">18</span></td><td>Ryan Maudsley</td><td class="fplst-team">Awob Abob Bobb</td><td>—</td><td>0</td></tr><tr><td><span class="fplst-rankbadge">19</span></td><td>Paul Maudsley</td><td class="fplst-team">Stach my Klich up</td><td>—</td><td>0</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+    <div class="fplst-footer">19 entrants — updated Friday 21 Aug 2026</div>
+  </div>
+  
+  <div class="fplst-prizepot">
+    <div class="fplst-prizepot-title">💰 Prize Pot — What You Need To Do</div>
+    <div class="fplst-prizepot-sub">19 entrants paid in so far — every amount below scales automatically as more people join.</div>
+
+    <div class="fplst-prizegroup">
+      <div class="fplst-prizegroup-head">Every Gameweek <span class="fplst-fundchip">Pot: £19</span></div>
+      <div class="fplst-prizerow"><span class="fplst-prizewhat">🥇 Highest score in the gameweek</span><span class="fplst-prizeamt">£15.20 <small>(80%, split if tied)</small></span></div>
+      <div class="fplst-prizerow"><span class="fplst-prizewhat">🍽️ 3rd-from-bottom score in the gameweek</span><span class="fplst-prizeamt">£3.80 <small>(20%, split if tied)</small></span></div>
+    </div>
+
+    <div class="fplst-prizegroup">
+      <div class="fplst-prizegroup-head">First Half — GW1 to GW19 <span class="fplst-fundchip">Fund: £95</span></div>
+      <div class="fplst-prizerow"><span class="fplst-prizewhat">🏆 Most points across the half</span><span class="fplst-prizeamt">£57 <small>(60%)</small></span></div>
+      <div class="fplst-prizerow"><span class="fplst-prizewhat">🥈 2nd most points across the half</span><span class="fplst-prizeamt">£28.50 <small>(30%)</small></span></div>
+      <div class="fplst-prizerow"><span class="fplst-prizewhat">🔥 Highest score in any single gameweek</span><span class="fplst-prizeamt">£5.70 <small>(6%)</small></span></div>
+      <div class="fplst-prizerow"><span class="fplst-prizewhat">💪 Best score in the half's worst gameweek</span><span class="fplst-prizeamt">£1.90 <small>(2%)</small></span></div>
+      <div class="fplst-prizerow"><span class="fplst-prizewhat">🎯 Closest to average in the half's worst gameweek</span><span class="fplst-prizeamt">£1.90 <small>(2%)</small></span></div>
+    </div>
+
+    <div class="fplst-prizegroup">
+      <div class="fplst-prizegroup-head">Second Half — GW20 to GW38 <span class="fplst-fundchip">Fund: £95</span></div>
+      <div class="fplst-prizerow"><span class="fplst-prizewhat">Same five prizes as the First Half, fund resets to £0 at GW20</span><span class="fplst-prizeamt"></span></div>
+    </div>
+
+    <div class="fplst-prizegroup">
+      <div class="fplst-prizegroup-head">Mini League Cup — GW33 knockout <span class="fplst-fundchip">Fund: £38</span></div>
+      <div class="fplst-prizerow"><span class="fplst-prizewhat">🏅 Cup winner</span><span class="fplst-prizeamt">£25.33 <small>(2/3)</small></span></div>
+      <div class="fplst-prizerow"><span class="fplst-prizewhat">🥈 Cup runner-up</span><span class="fplst-prizeamt">£12.67 <small>(1/3)</small></span></div>
+    </div>
+
+    <div class="fplst-prizenote">No 3rd-place prize in any category. Ties split the prize evenly between everyone tied. Full rules and a live running ledger of who's owed what are in the tracker spreadsheet.</div>
+  </div>
+</div>
+<script>
+  document.querySelectorAll('.fplst-tab').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.fplst-tab').forEach(function (b) { b.classList.remove('fplst-tabactive'); });
+      document.querySelectorAll('.fplst-tabpanel').forEach(function (p) { p.classList.remove('fplst-active'); });
+      btn.classList.add('fplst-tabactive');
+      document.getElementById('fplst-panel-' + btn.dataset.tab).classList.add('fplst-active');
+    });
+  });
+</script>
+</body>
+</html>
