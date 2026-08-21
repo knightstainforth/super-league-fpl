@@ -36,10 +36,10 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- index.html; then
+          git add index.html
+          if git diff --cached --quiet; then
             echo "index.html unchanged - nothing to commit."
           else
-            git add index.html
             git commit -m "Refresh standings ($(date -u '+%Y-%m-%d %H:%M UTC'))"
             git push
             echo "Published updated index.html."
