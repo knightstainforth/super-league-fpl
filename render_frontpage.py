@@ -4,34 +4,34 @@ Render a static, self-contained "front page" standings HTML for the
 Knights Table Super League tracker. No live fetch, no dependencies beyond
 one Google Fonts link — values are baked in at generation time. Regenerated
 weekly alongside the workbook and dropped into the Dropbox folder.
- 
+
 FPL-branded look (purple / green / cyan) with three tabs (Overall, First
 Half, Second Half) and a prize-pot reference section at the bottom.
- 
+
 Usage as a library: render_frontpage_html(entrants, generated_at_label="")
 entrants: same shape used by build.py's build(entrants=...) param:
     [{"manager_name": "...", "team_name": "...", "entry_id": 123,
       "scores": {1: 62, 2: 55, ...}}, ...]   # scores keyed by GW number, 1-38
 """
- 
+
 H1_END = 19
 H2_START = 20
 N_GW = 38
- 
- 
+
+
 def fmt_money(n):
     s = f"{n:.2f}"
     if s.endswith(".00"):
         s = s[:-3]
     return "£" + s
- 
- 
+
+
 def _rank_badge(rank):
     if rank <= 3:
         return f'<span class="fplst-rankbadge fplst-rank-{rank}">{rank}</span>'
     return f'<span class="fplst-rankbadge">{rank}</span>'
- 
- 
+
+
 def _standings_rows(sorted_list, score_key, gw_col_label="GW"):
     rows = ""
     for i, e in enumerate(sorted_list):
@@ -41,11 +41,11 @@ def _standings_rows(sorted_list, score_key, gw_col_label="GW"):
                  f'<td class="fplst-team">{e["team_name"]}</td><td>{gw_display}</td>'
                  f'<td>{e[score_key]}</td></tr>')
     return rows
- 
- 
+
+
 def _half_stats(entrants, gw_start, gw_end):
     """Compute half-season standings + the sub-prize winners.
- 
+
     NOTE (2026-08-21): the "closest to average" sub-prize used to compare
     each entrant's score IN THE HALF'S WORST GAMEWEEK to that gameweek's
     average. Per Ryan's rule change it now compares each entrant's
@@ -59,21 +59,21 @@ def _half_stats(entrants, gw_start, gw_end):
         e["_half_total"] = sum(v for g, v in e.get("scores", {}).items() if gw_start <= g <= gw_end)
         in_range = {g: v for g, v in e.get("scores", {}).items() if gw_start <= g <= gw_end}
         e["_half_rowmax"] = max(in_range.values()) if in_range else None
- 
+
     if not played_gws:
         return None
- 
+
     totals = {e["manager_name"]: e["_half_total"] for e in entrants}
     max_total = max(totals.values())
     leaders = [n for n, v in totals.items() if v == max_total]
     strictly_lower = [v for v in totals.values() if v < max_total]
     runner_total = max(strictly_lower) if strictly_lower else None
     runners = [n for n, v in totals.items() if runner_total is not None and v == runner_total]
- 
+
     row_maxes = [e["_half_rowmax"] for e in entrants if e["_half_rowmax"] is not None]
     best_single = max(row_maxes) if row_maxes else None
     best_single_winners = [e["manager_name"] for e in entrants if e["_half_rowmax"] == best_single]
- 
+
     averages = {}
     for g in played_gws:
         vals = [e["scores"][g] for e in entrants if g in e.get("scores", {})]
@@ -84,13 +84,13 @@ def _half_stats(entrants, gw_start, gw_end):
     scores_in_worst = {e["manager_name"]: e["scores"][worst_gw] for e in entrants if worst_gw in e.get("scores", {})}
     best_in_worst = max(scores_in_worst.values())
     best_in_worst_winners = [n for n, v in scores_in_worst.items() if v == best_in_worst]
- 
+
     # "Closest to Half-Season Average" - compares each entrant's half TOTAL
     # to the average half TOTAL across all entrants (not a single gameweek).
     half_avg_total = sum(totals.values()) / len(totals)
     closest_diff = min(abs(v - half_avg_total) for v in totals.values())
     closest_winners = [n for n, v in totals.items() if abs(v - half_avg_total) == closest_diff]
- 
+
     return {
         "leaders": leaders, "max_total": max_total,
         "runners": runners, "runner_total": runner_total,
@@ -100,20 +100,20 @@ def _half_stats(entrants, gw_start, gw_end):
         "half_avg_total": half_avg_total,
         "closest_winners": closest_winners, "closest_diff": closest_diff,
     }
- 
- 
+
+
 def _half_tab_html(tab_id, label, gw_range_label, entrants, gw_start, gw_end, fund_per_player=5):
     n = len(entrants)
     fund = fund_per_player * n
     stats = _half_stats(entrants, gw_start, gw_end)
- 
+
     played_in_half = sorted({g for e in entrants for g in e.get("scores", {}) if gw_start <= g <= gw_end})
     latest_in_half = played_in_half[-1] if played_in_half else None
     for e in entrants:
         e["_gw_display"] = e.get("scores", {}).get(latest_in_half, "—") if latest_in_half else "—"
     sorted_list = sorted(entrants, key=lambda e: e["_half_total"], reverse=True)
     rows_html = _standings_rows(sorted_list, "_half_total")
- 
+
     if stats is None:
         callouts = f'<div class="fplst-callout">⚽ {label} hasn\'t started yet.</div>'
     else:
@@ -139,7 +139,7 @@ def _half_tab_html(tab_id, label, gw_range_label, entrants, gw_start, gw_end, fu
             f'<div class="fplst-callout">🎯 <b>Closest to the half-season average:</b> {", ".join(stats["closest_winners"])} '
             f'(league average so far: {stats["half_avg_total"]:.1f} pts)</div>'
         )
- 
+
     return f"""
   <div class="fplst-tabpanel" id="fplst-panel-{tab_id}" role="tabpanel">
     <div class="fplst-panelhead">
@@ -154,8 +154,8 @@ def _half_tab_html(tab_id, label, gw_range_label, entrants, gw_start, gw_end, fu
       </table>
     </div>
   </div>"""
- 
- 
+
+
 def _prize_pot_html(entrants):
     n = len(entrants)
     weekly_pot = 1 * n
@@ -165,13 +165,13 @@ def _prize_pot_html(entrants):
   <div class="fplst-prizepot">
     <div class="fplst-prizepot-title">💰 Prize Pot — What You Need To Do</div>
     <div class="fplst-prizepot-sub">{n} entrants paid in so far — every amount below scales automatically as more people join.</div>
- 
+
     <div class="fplst-prizegroup">
       <div class="fplst-prizegroup-head">Every Gameweek <span class="fplst-fundchip">Pot: {fmt_money(weekly_pot)}</span></div>
       <div class="fplst-prizerow"><span class="fplst-prizewhat">🥇 Highest score in the gameweek</span><span class="fplst-prizeamt">{fmt_money(0.8*weekly_pot)} <small>(80%, split if tied)</small></span></div>
       <div class="fplst-prizerow"><span class="fplst-prizewhat">🍽️ 3rd-from-bottom score in the gameweek</span><span class="fplst-prizeamt">{fmt_money(0.2*weekly_pot)} <small>(20%, split if tied)</small></span></div>
     </div>
- 
+
     <div class="fplst-prizegroup">
       <div class="fplst-prizegroup-head">First Half — GW1 to GW19 <span class="fplst-fundchip">Fund: {fmt_money(half_fund)}</span></div>
       <div class="fplst-prizerow"><span class="fplst-prizewhat">🏆 Most points across the half</span><span class="fplst-prizeamt">{fmt_money(0.60*half_fund)} <small>(60%)</small></span></div>
@@ -180,35 +180,35 @@ def _prize_pot_html(entrants):
       <div class="fplst-prizerow"><span class="fplst-prizewhat">💪 Best score in the half's worst gameweek</span><span class="fplst-prizeamt">{fmt_money(0.02*half_fund)} <small>(2%)</small></span></div>
       <div class="fplst-prizerow"><span class="fplst-prizewhat">🎯 Closest to the half-season average total</span><span class="fplst-prizeamt">{fmt_money(0.06*half_fund)} <small>(6%)</small></span></div>
     </div>
- 
+
     <div class="fplst-prizegroup">
       <div class="fplst-prizegroup-head">Second Half — GW20 to GW38 <span class="fplst-fundchip">Fund: {fmt_money(half_fund)}</span></div>
       <div class="fplst-prizerow"><span class="fplst-prizewhat">Same five prizes as the First Half, fund resets to £0 at GW20</span><span class="fplst-prizeamt"></span></div>
     </div>
- 
+
     <div class="fplst-prizegroup">
       <div class="fplst-prizegroup-head">Mini League Cup — GW33 knockout <span class="fplst-fundchip">Fund: {fmt_money(cup_fund)}</span></div>
       <div class="fplst-prizerow"><span class="fplst-prizewhat">🏅 Cup winner</span><span class="fplst-prizeamt">{fmt_money((2/3)*cup_fund)} <small>(2/3)</small></span></div>
       <div class="fplst-prizerow"><span class="fplst-prizewhat">🥈 Cup runner-up</span><span class="fplst-prizeamt">{fmt_money((1/3)*cup_fund)} <small>(1/3)</small></span></div>
     </div>
- 
+
     <div class="fplst-prizenote">No 3rd-place prize in any category. Ties split the prize evenly between everyone tied. "Closest to the half-season average total" compares each entrant's half-season points total to the league's average half-season total (not a single gameweek). Full rules and a live running ledger of who's owed what are in the tracker spreadsheet.</div>
   </div>"""
- 
- 
+
+
 def render_frontpage_html(entrants, generated_at_label=""):
     n = len(entrants)
     all_gws = sorted({g for e in entrants for g in e.get("scores", {})})
     latest_gw = all_gws[-1] if all_gws else None
- 
+
     for e in entrants:
         e["_season_total"] = sum(e.get("scores", {}).values())
         e["_gw_score"] = e.get("scores", {}).get(latest_gw) if latest_gw else None
         e["_gw_display"] = e["_gw_score"] if e["_gw_score"] is not None else "—"
- 
+
     sorted_overall = sorted(entrants, key=lambda e: e["_season_total"], reverse=True)
     overall_rows = _standings_rows(sorted_overall, "_season_total")
- 
+
     if latest_gw is not None:
         gw_scores = [e["_gw_score"] for e in entrants if e["_gw_score"] is not None]
         weekly_pot = 1 * n
@@ -232,7 +232,7 @@ def render_frontpage_html(entrants, generated_at_label=""):
         gw_badge = "Pre-season"
         overall_callouts = ('<div class="fplst-callout">⚽ Season hasn\'t kicked off yet — '
                              'check back after Gameweek 1!</div>')
- 
+
     overall_panel = f"""
   <div class="fplst-tabpanel fplst-active" id="fplst-panel-overall" role="tabpanel">
     <div class="fplst-panelhead">
@@ -247,15 +247,15 @@ def render_frontpage_html(entrants, generated_at_label=""):
       </table>
     </div>
   </div>"""
- 
+
     half1_panel = _half_tab_html("half1", "First Half", "GW1 – GW19", entrants, 1, H1_END)
     half2_panel = _half_tab_html("half2", "Second Half", "GW20 – GW38", entrants, H2_START, N_GW)
     prize_pot = _prize_pot_html(entrants)
- 
+
     footer = f"{n} entrants"
     if generated_at_label:
         footer += f" — updated {generated_at_label}"
- 
+
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -324,7 +324,7 @@ def render_frontpage_html(entrants, generated_at_label=""):
   .fplst-rank-2 {{ background: #d9d9d9; color: #3a3a3a; }}
   .fplst-rank-3 {{ background: #e8b98a; color: #5a3300; }}
   .fplst-footer {{ margin-top: 14px; font-size: 12px; color: var(--text-secondary); text-align: right; }}
- 
+
   .fplst-prizepot {{ margin-top: 20px; background: var(--card); border-radius: 16px; padding: 20px; box-shadow: 0 2px 10px rgba(55,0,60,0.12); }}
   .fplst-prizepot-title {{ font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 17px; color: var(--fpl-purple); }}
   .fplst-prizepot-sub {{ font-size: 12.5px; color: var(--text-secondary); margin-top: 3px; margin-bottom: 16px; }}
@@ -341,7 +341,7 @@ def render_frontpage_html(entrants, generated_at_label=""):
   .fplst-prizeamt {{ font-weight: 800; color: var(--fpl-purple); white-space: nowrap; }}
   .fplst-prizeamt small {{ font-weight: 500; color: var(--text-secondary); }}
   .fplst-prizenote {{ margin-top: 12px; font-size: 11.5px; color: var(--text-secondary); line-height: 1.5; }}
- 
+
   @media (prefers-color-scheme: dark) {{
     :root {{ --surface: #120014; --card: #1f0224; --text-primary: #ffffff; --text-secondary: #c9b7cc; }}
     .fplst-table th {{ border-bottom-color: #3a1f3e; }}
@@ -388,8 +388,8 @@ def render_frontpage_html(entrants, generated_at_label=""):
 </body>
 </html>
 """
- 
- 
+
+
 if __name__ == "__main__":
     import sys
     entrants = [
@@ -402,4 +402,3 @@ if __name__ == "__main__":
     with open(out_path, "w") as f:
         f.write(html)
     print("wrote", out_path)
- 
