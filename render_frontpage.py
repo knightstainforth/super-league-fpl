@@ -119,12 +119,12 @@ def _half_tab_html(tab_id, label, gw_range_label, entrants, gw_start, gw_end, fu
     else:
         callouts = (
             f'<div class="fplst-callout">👑 <b>Leading:</b> {", ".join(stats["leaders"])} — {stats["max_total"]} pts '
-            f'({fmt_money(0.60 * fund / len(stats["leaders"]))} each if it finishes here)</div>'
+            f'({fmt_money(0.50 * fund / len(stats["leaders"]))} each if it finishes here)</div>'
         )
         if stats["runners"]:
             callouts += (
                 f'<div class="fplst-callout">🥈 <b>Runner-up spot:</b> {", ".join(stats["runners"])} — {stats["runner_total"]} pts '
-                f'({fmt_money(0.30 * fund / len(stats["runners"]))} each if it finishes here)</div>'
+                f'({fmt_money(0.20 * fund / len(stats["runners"]))} each if it finishes here)</div>'
             )
         callouts += (
             f'<div class="fplst-callout">🔥 <b>Best single GW this half:</b> {", ".join(stats["best_single_winners"])} — '
@@ -174,11 +174,11 @@ def _prize_pot_html(entrants):
 
     <div class="fplst-prizegroup">
       <div class="fplst-prizegroup-head">First Half — GW1 to GW19 <span class="fplst-fundchip">Fund: {fmt_money(half_fund)}</span></div>
-      <div class="fplst-prizerow"><span class="fplst-prizewhat">🏆 Most points across the half</span><span class="fplst-prizeamt">{fmt_money(0.60*half_fund)} <small>(60%)</small></span></div>
-      <div class="fplst-prizerow"><span class="fplst-prizewhat">🥈 2nd most points across the half</span><span class="fplst-prizeamt">{fmt_money(0.30*half_fund)} <small>(30%)</small></span></div>
-      <div class="fplst-prizerow"><span class="fplst-prizewhat">🔥 Highest score in any single gameweek</span><span class="fplst-prizeamt">{fmt_money(0.02*half_fund)} <small>(2%)</small></span></div>
-      <div class="fplst-prizerow"><span class="fplst-prizewhat">💪 Best score in the half's worst gameweek</span><span class="fplst-prizeamt">{fmt_money(0.02*half_fund)} <small>(2%)</small></span></div>
-      <div class="fplst-prizerow"><span class="fplst-prizewhat">🎯 Closest to the half-season average total</span><span class="fplst-prizeamt">{fmt_money(0.06*half_fund)} <small>(6%)</small></span></div>
+      <div class="fplst-prizerow"><span class="fplst-prizewhat">🏆 Most points across the half</span><span class="fplst-prizeamt">{fmt_money(0.50*half_fund)} <small>(50%)</small></span></div>
+      <div class="fplst-prizerow"><span class="fplst-prizewhat">🥈 2nd most points across the half</span><span class="fplst-prizeamt">{fmt_money(0.20*half_fund)} <small>(20%)</small></span></div>
+      <div class="fplst-prizerow"><span class="fplst-prizewhat">🔥 Highest score in any single gameweek</span><span class="fplst-prizeamt">{fmt_money(0.10*half_fund)} <small>(10%)</small></span></div>
+      <div class="fplst-prizerow"><span class="fplst-prizewhat">💪 Best score in the half's worst gameweek</span><span class="fplst-prizeamt">{fmt_money(0.10*half_fund)} <small>(10%)</small></span></div>
+      <div class="fplst-prizerow"><span class="fplst-prizewhat">🎯 Closest to the half-season average total</span><span class="fplst-prizeamt">{fmt_money(0.10*half_fund)} <small>(10%)</small></span></div>
     </div>
 
     <div class="fplst-prizegroup">
