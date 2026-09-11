@@ -11,7 +11,11 @@ Half, Second Half) and a prize-pot reference section at the bottom.
 Usage as a library: render_frontpage_html(entrants, generated_at_label="")
 entrants: same shape used by build.py's build(entrants=...) param:
     [{"manager_name": "...", "team_name": "...", "entry_id": 123,
-      "scores": {1: 62, 2: 55, ...}}, ...]   # scores keyed by GW number, 1-38
+      "scores": {1: 62, 2: 55, ...},          # NET score per GW, used for every total/prize
+      "gross_scores": {2: 66, ...}}, ...]      # OPTIONAL: only for a GW where the raw FPL
+                                                # score (before a transfer-point hit) differs
+                                                # from the net score above. Display-only —
+                                                # never used for totals or prize calculations.
 """
 
 H1_END = 19
@@ -30,6 +34,27 @@ def _rank_badge(rank):
     if rank <= 3:
         return f'<span class="fplst-rankbadge fplst-rank-{rank}">{rank}</span>'
     return f'<span class="fplst-rankbadge">{rank}</span>'
+
+
+def _format_gw_cell(e, gw):
+    """Render one entrant's score for a single gameweek for the standings table.
+
+    Plain net score normally (e.g. "43"). When a transfer-point hit was taken
+    that gameweek — i.e. e["gross_scores"][gw] is present and differs from the
+    net score — shows the raw FPL figure with the net score alongside, e.g.
+    "47 (43 w/ transfers)", so it's obvious why this differs from someone's own
+    FPL app (which shows the raw 47) without ever using the raw figure for the
+    league's own weekly-win calculation.
+    """
+    if gw is None:
+        return "—"
+    net = e.get("scores", {}).get(gw)
+    if net is None:
+        return "—"
+    gross = e.get("gross_scores", {}).get(gw)
+    if gross is not None and gross != net:
+        return f'{gross} <span class="fplst-hitnote">({net} w/ transfers)</span>'
+    return str(net)
 
 
 def _standings_rows(sorted_list, score_key, gw_col_label="GW"):
@@ -53,6 +78,10 @@ def _half_stats(entrants, gw_start, gw_end):
     instead - a season-total comparison, not a single-gameweek one. The
     "best score in the half's worst gameweek" sub-prize is unchanged and
     still uses the worst-gameweek lookup below.
+
+    All of this operates on e["scores"] only (the NET, post-transfer-hit
+    figures) — gross_scores never feeds into any total or prize calculation,
+    only the single-GW display cell (see _format_gw_cell).
     """
     played_gws = sorted({g for e in entrants for g in e.get("scores", {}) if gw_start <= g <= gw_end})
     for e in entrants:
@@ -110,7 +139,7 @@ def _half_tab_html(tab_id, label, gw_range_label, entrants, gw_start, gw_end, fu
     played_in_half = sorted({g for e in entrants for g in e.get("scores", {}) if gw_start <= g <= gw_end})
     latest_in_half = played_in_half[-1] if played_in_half else None
     for e in entrants:
-        e["_gw_display"] = e.get("scores", {}).get(latest_in_half, "—") if latest_in_half else "—"
+        e["_gw_display"] = _format_gw_cell(e, latest_in_half) if latest_in_half else "—"
     sorted_list = sorted(entrants, key=lambda e: e["_half_total"], reverse=True)
     rows_html = _standings_rows(sorted_list, "_half_total")
 
@@ -192,7 +221,7 @@ def _prize_pot_html(entrants):
       <div class="fplst-prizerow"><span class="fplst-prizewhat">🥈 Cup runner-up</span><span class="fplst-prizeamt">{fmt_money((1/3)*cup_fund)} <small>(1/3)</small></span></div>
     </div>
 
-    <div class="fplst-prizenote">No 3rd-place prize in any category. Ties split the prize evenly between everyone tied. "Closest to the half-season average total" compares each entrant's half-season points total to the league's average half-season total (not a single gameweek). Full rules and a live running ledger of who's owed what are in the tracker spreadsheet.</div>
+    <div class="fplst-prizenote">No 3rd-place prize in any category. Ties split the prize evenly between everyone tied. A gameweek score showing as e.g. "47 (43 w/ transfers)" means a transfer-point hit was taken that week — every total and every prize on this page uses the net (after-hit) figure, exactly like the FPL app's own season total, to stop hits being used to chase weekly wins. "Closest to the half-season average total" compares each entrant's half-season points total to the league's average half-season total (not a single gameweek). Full rules and a live running ledger of who's owed what are in the tracker spreadsheet.</div>
   </div>"""
 
 
@@ -204,7 +233,7 @@ def render_frontpage_html(entrants, generated_at_label=""):
     for e in entrants:
         e["_season_total"] = sum(e.get("scores", {}).values())
         e["_gw_score"] = e.get("scores", {}).get(latest_gw) if latest_gw else None
-        e["_gw_display"] = e["_gw_score"] if e["_gw_score"] is not None else "—"
+        e["_gw_display"] = _format_gw_cell(e, latest_gw) if latest_gw else "—"
 
     sorted_overall = sorted(entrants, key=lambda e: e["_season_total"], reverse=True)
     overall_rows = _standings_rows(sorted_overall, "_season_total")
@@ -324,6 +353,7 @@ def render_frontpage_html(entrants, generated_at_label=""):
   .fplst-rank-2 {{ background: #d9d9d9; color: #3a3a3a; }}
   .fplst-rank-3 {{ background: #e8b98a; color: #5a3300; }}
   .fplst-footer {{ margin-top: 14px; font-size: 12px; color: var(--text-secondary); text-align: right; }}
+  .fplst-hitnote {{ font-weight: 500; color: var(--text-secondary); font-size: 11.5px; white-space: nowrap; }}
 
   .fplst-prizepot {{ margin-top: 20px; background: var(--card); border-radius: 16px; padding: 20px; box-shadow: 0 2px 10px rgba(55,0,60,0.12); }}
   .fplst-prizepot-title {{ font-family: 'Montserrat', sans-serif; font-weight: 900; font-size: 17px; color: var(--fpl-purple); }}
