@@ -69,7 +69,17 @@ def london_label(now=None):
 
 
 def build_entrants():
-    """Return (entrants, notes). entrants is the shape render_frontpage_html wants."""
+    """Return (entrants, notes). entrants is the shape render_frontpage_html wants.
+
+    entrants[i]["scores"][gw]        -> NET score for that gameweek (after any
+                                         transfer-point hit), used for every total,
+                                         prize calc, and the "used for prizes" number.
+    entrants[i]["gross_scores"][gw]  -> only present for a gameweek where the raw
+                                         FPL "points" figure (what the FPL app shows,
+                                         BEFORE the hit is subtracted) differs from
+                                         the net score, i.e. the manager took a hit
+                                         that gameweek. Display-only.
+    """
     notes = []
     standings = get_json(f"{BASE}/leagues-classic/{LEAGUE_ID}/standings/")
     league_name = standings.get("league", {}).get("name", "?")
@@ -84,7 +94,6 @@ def build_entrants():
                 "manager_name": (r.get("player_name") or "").strip(),
                 "team_name": (r.get("entry_name") or "").strip(),
                 "entry_id": r["entry"],
-                "standings_total": r.get("total"),
             })
         if not page.get("standings", {}).get("has_next"):
             break
@@ -106,7 +115,6 @@ def build_entrants():
                     "manager_name": f"{first} {lastn}".strip(),
                     "team_name": (r.get("entry_name") or "").strip(),
                     "entry_id": r["entry"],
-                    "standings_total": None,
                 })
             if not page.get("new_entries", {}).get("has_next"):
                 break
@@ -123,31 +131,57 @@ def build_entrants():
         if e["manager_name"] and e["manager_name"] == e["manager_name"].lower():
             e["manager_name"] = e["manager_name"].title()
 
-    # Per-manager gameweek history
+    # Per-manager gameweek history.
+    #
+    # IMPORTANT (found 2026-09-11): the history API's per-row "points" field is
+    # the RAW score (what the FPL app shows before a transfer-point hit is
+    # subtracted) — it is NOT always net of hits, even though "total_points"
+    # (the running cumulative total) IS net. E.g. a manager scores 47 raw,
+    # takes a -4 hit, "points" reads 47 but total_points only goes up by 43.
+    # The league's own rule (see Prize pot rules) is that weekly/half-season
+    # prizes use the NET score, specifically to stop people "wildcarding"
+    # every week for the weekly win. So: derive each gameweek's net score by
+    # differencing consecutive total_points values (which telescopes exactly
+    # to the final total by construction, no separate hit lookup needed), and
+    # keep the raw "points" figure alongside ONLY when it differs, purely for
+    # a "47 (43 with transfers)" style display on the site.
     for e in roster:
         hist = get_json(f"{BASE}/entry/{e['entry_id']}/history/")
         current = hist.get("current", []) or []
-        scores = {}
-        for row in current:
-            ev, pts = row.get("event"), row.get("points")
-            if isinstance(ev, int) and isinstance(pts, int) and 1 <= ev <= 38:
-                scores[ev] = pts
-        e["scores"] = scores
+        current_sorted = sorted(current, key=lambda row: row.get("event", 0))
 
-        # Cross-check: our summed per-GW points vs the API's own totals.
+        scores = {}
+        gross_scores = {}
+        prev_total = 0
+        for row in current_sorted:
+            ev = row.get("event")
+            tot = row.get("total_points")
+            raw = row.get("points")
+            if not (isinstance(ev, int) and isinstance(tot, int) and 1 <= ev <= 38):
+                continue
+            net = tot - prev_total
+            scores[ev] = net
+            if isinstance(raw, int) and raw != net:
+                gross_scores[ev] = raw
+            prev_total = tot
+        e["scores"] = scores
+        e["gross_scores"] = gross_scores
+
+        # Sanity check only — net scores telescope to the final total_points by
+        # construction, so a mismatch here means something structurally odd in
+        # the API response (out-of-order events, gaps, etc.), not a hits issue.
         summed = sum(scores.values())
-        api_total = current[-1].get("total_points") if current else 0
-        if current and summed != api_total:
-            notes.append(f"MISMATCH {e['manager_name']}: summed GW points {summed} != "
-                         f"history total_points {api_total}")
-        if e["standings_total"] is not None and summed != e["standings_total"]:
-            notes.append(f"MISMATCH {e['manager_name']}: summed GW points {summed} != "
-                         f"standings total {e['standings_total']}")
-        print(f"  {e['manager_name']:<22} {len(scores):>2} GWs, {summed} pts")
+        api_total = current_sorted[-1].get("total_points") if current_sorted else 0
+        if current_sorted and summed != api_total:
+            notes.append(f"MISMATCH {e['manager_name']}: summed net GW points {summed} != "
+                         f"history total_points {api_total} (unexpected - inspect raw API response)")
+
+        if gross_scores:
+            hits_desc = ", ".join(f"GW{gw}: {gross_scores[gw]}->{scores[gw]}" for gw in sorted(gross_scores))
+            print(f"  {e['manager_name']:<22} transfer hit(s): {hits_desc}")
+        print(f"  {e['manager_name']:<22} {len(scores):>2} GWs, {summed} pts (net)")
         time.sleep(0.3)  # be polite to the API
 
-    for e in roster:
-        e.pop("standings_total", None)
     return roster, notes
 
 
